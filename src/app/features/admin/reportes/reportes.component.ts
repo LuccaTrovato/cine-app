@@ -22,8 +22,8 @@ Chart.register(...registerables);
         Hasta
         <input type="date" [(ngModel)]="hasta" (change)="cargar()" />
       </label>
-      <button (click)="exportarPdf()">📄 Exportar PDF</button>
-      <button (click)="exportarExcel()">📊 Exportar Excel</button>
+      <button (click)="exportarPdf()">Exportar PDF</button>
+      <button (click)="exportarExcel()">Exportar Excel</button>
     </div>
 
     <p>Facturación total del periodo: <strong>&#36;{{ totalPeriodo() }}</strong></p>
@@ -65,7 +65,7 @@ Chart.register(...registerables);
         background: #e50914;
         color: #fff;
         border: none;
-        padding: 0.55rem 1rem;
+        padding: 0.7rem 1.25rem;
         border-radius: 4px;
         cursor: pointer;
       }

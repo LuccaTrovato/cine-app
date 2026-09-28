@@ -23,8 +23,18 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
           <p>{{ e.funciones?.fecha_hora_inicio | date: 'dd/MM/yyyy HH:mm' }}</p>
           <p>{{ e.funciones?.salas?.nombre }} · Butaca {{ e.fila }}{{ e.columna }} @if (e.es_vip) { (VIP) }</p>
           <p>Estado: <strong>{{ e.estado }}</strong></p>
+          <div class="qr-slot">
+            @if (e.estado === 'PENDIENTE') {
+              <app-codigo-qr [valor]="e.codigo_qr" [tamano]="120" />
+            }
+            @if (e.estado === 'CANCELADO') {
+              <img class="imagen-cancelado" src="imagenes/cancel_77947.png" alt="Cancelado" />
+            }
+            @if (e.estado === 'VALIDADO') {
+              <img class="imagen-validado" src="imagenes/checked.png" alt="Validado" />
+            }
+          </div>
           @if (e.estado === 'PENDIENTE') {
-            <app-codigo-qr [valor]="e.codigo_qr" [tamano]="120" />
             <button (click)="cancelar(e)">Cancelar</button>
           }
           @if (error() === e.id) {
@@ -43,8 +53,22 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
         <div class="ticket" [class.cancelado]="p.estado === 'CANCELADO'">
           <h3>{{ p.candy_productos?.nombre }} x{{ p.cantidad }}</h3>
           <p>Estado: <strong>{{ p.estado }}</strong></p>
+          <div class="qr-slot">
+            @if (p.estado === 'PENDIENTE') {
+              <app-codigo-qr [valor]="p.codigo_qr" [tamano]="120" />
+            }
+            @if (p.estado === 'CANCELADO') {
+              <img class="imagen-cancelado" src="imagenes/cancel_77947.png" alt="Cancelado" />
+            }
+            @if (p.estado === 'VALIDADO') {
+              <img class="imagen-validado" src="imagenes/checked.png" alt="Validado" />
+            }
+          </div>
           @if (p.estado === 'PENDIENTE') {
-            <app-codigo-qr [valor]="p.codigo_qr" [tamano]="120" />
+            <button (click)="cancelarPedido(p)">Cancelar pedido</button>
+          }
+          @if (error() === p.id) {
+            <p class="error">{{ errorMensaje() }}</p>
           }
         </div>
       }
@@ -54,11 +78,16 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
     `
       .grilla {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1rem;
         margin-bottom: 2rem;
       }
       .ticket {
+        min-width: 0;
+        min-height: 390px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1rem;
@@ -66,18 +95,45 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
       .ticket.cancelado {
         opacity: 0.5;
       }
-      button {
-        background: transparent;
+      .qr-slot {
+        min-height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: auto;
+      }
+      .ticket button {
+        display: block;
+        width: 100%;
+        background: #e50914;
         border: 1px solid #e50914;
-        color: #e50914;
-        padding: 0.3rem 0.8rem;
+        color: #fff;
+        padding: 0.65rem 1rem;
         border-radius: 4px;
         cursor: pointer;
-        margin-top: 0.5rem;
+        margin-top: 0.75rem;
+        font-weight: 600;
       }
       .error {
         color: #e50914;
         font-size: 0.8rem;
+      }
+      .imagen-cancelado {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        display: block;
+      }
+      .imagen-validado {
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+        display: block;
+      }
+      @media (max-width: 600px) {
+        .grilla {
+          grid-template-columns: 1fr;
+        }
       }
     `,
   ],
@@ -115,6 +171,17 @@ export class MisEntradasComponent implements OnInit {
     } catch (e) {
       this.error.set(entrada.id);
       this.errorMensaje.set(e instanceof Error ? e.message : 'No se pudo cancelar.');
+    }
+  }
+
+  async cancelarPedido(pedido: CandyPedido): Promise<void> {
+    this.error.set(null);
+    try {
+      await this.candyService.cancelarPedido(pedido.id);
+      await this.cargar();
+    } catch (e) {
+      this.error.set(pedido.id);
+      this.errorMensaje.set(e instanceof Error ? e.message : 'No se pudo cancelar el pedido.');
     }
   }
 }

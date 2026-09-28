@@ -24,12 +24,12 @@ type ResultadoValidacion = { tipo: 'entrada' | 'candy'; descripcion: string } | 
 
     @if (resultado(); as r) {
       <div class="resultado ok">
-        ✅ {{ r.tipo === 'entrada' ? 'Entrada' : 'Pedido' }} validado correctamente.<br />
+        {{ r.tipo === 'entrada' ? 'Entrada' : 'Pedido' }} validado correctamente.<br />
         {{ r.descripcion }}
       </div>
     }
     @if (error()) {
-      <div class="resultado error">❌ {{ error() }}</div>
+      <div class="resultado error">{{ error() }}</div>
     }
   `,
   styles: [
@@ -107,22 +107,23 @@ export class ValidarQrComponent implements AfterViewInit, OnDestroy {
 
   async validar(codigo: string): Promise<void> {
     if (!codigo?.trim()) return;
+    const codigoNormalizado = codigo.trim().toUpperCase();
     this.error.set(null);
     this.resultado.set(null);
     const empleado = this.auth.profile();
     if (!empleado) return;
 
     try {
-      if (codigo.startsWith('TICKET-')) {
-        const entrada = await this.entradasService.buscarPorCodigoQr(codigo);
+      if (codigoNormalizado.startsWith('TKT-') || codigoNormalizado.startsWith('TICKET-')) {
+        const entrada = await this.entradasService.buscarPorCodigoQr(codigoNormalizado);
         if (!entrada) throw new Error('No se encontró ninguna entrada con ese código.');
         await this.entradasService.validarEntrada(entrada.id, empleado.id);
         this.resultado.set({
           tipo: 'entrada',
           descripcion: `${entrada.funciones?.peliculas?.titulo ?? ''} · Butaca ${entrada.fila}${entrada.columna}`,
         });
-      } else if (codigo.startsWith('CANDY-')) {
-        const pedido = await this.candyService.buscarPorCodigoQr(codigo);
+      } else if (codigoNormalizado.startsWith('CB-') || codigoNormalizado.startsWith('CANDY-')) {
+        const pedido = await this.candyService.buscarPorCodigoQr(codigoNormalizado);
         if (!pedido) throw new Error('No se encontró ningún pedido con ese código.');
         await this.candyService.validarPedido(pedido.id);
         this.resultado.set({

@@ -6,7 +6,7 @@ import { Component, input } from '@angular/core';
   template: `
     <span class="estrellas" [attr.aria-label]="'Puntuacion ' + puntuacion() + ' de 5'">
       @for (i of [1, 2, 3, 4, 5]; track i) {
-        <span [class.llena]="i <= puntuacion()">★</span>
+        <span [class.llena]="i <= puntuacion()">*</span>
       }
     </span>
   `,

@@ -34,7 +34,6 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           </label>
           <p>DNI: {{ p.dni }}</p>
           <p>Fecha de nacimiento: {{ p.fecha_nacimiento }}</p>
-          <p>Rol: {{ p.rol }}</p>
           <p>Puntos acumulados: <strong>{{ p.puntos_acumulados }}</strong></p>
           <p>Crédito a favor: <strong>&#36;{{ p.credito_favor }}</strong></p>
 
@@ -50,9 +49,12 @@ import { SupabaseService } from '../../../core/services/supabase.service';
     `
       .tarjeta {
         max-width: 420px;
+        width: 100%;
+        box-sizing: border-box;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1.5rem;
+        margin: 0 auto;
       }
       .avatar {
         display: flex;
@@ -97,6 +99,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
         border: 1px solid #555;
       }
       button {
+        align-self: center;
         background: #e50914;
         color: #fff;
         border: none;

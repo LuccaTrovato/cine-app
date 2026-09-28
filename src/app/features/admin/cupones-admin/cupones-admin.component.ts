@@ -61,11 +61,12 @@ import { Cupon } from '../../../core/models/cupon.model';
   `,
   styles: [
     `
-      .formulario {
+            .formulario {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        max-width: 380px;
+        box-sizing: border-box;
+        width: 100%;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1.25rem;
@@ -81,6 +82,21 @@ import { Cupon } from '../../../core/models/cupon.model';
         flex-direction: row;
         align-items: center;
       }
+      label.checkbox input {
+        appearance: none;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex: 0 0 1.25rem;
+        padding: 0;
+        border: 1px solid #777;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      label.checkbox input:checked {
+        background: #e50914;
+        border-color: #e50914;
+        box-shadow: inset 0 0 0 4px #181818;
+      }
       input {
         padding: 0.5rem;
         border-radius: 4px;
@@ -92,9 +108,12 @@ import { Cupon } from '../../../core/models/cupon.model';
         background: #e50914;
         color: #fff;
         border: none;
-        padding: 0.5rem 1rem;
+        padding: 0.65rem 1.25rem;
         border-radius: 4px;
         cursor: pointer;
+      }
+      .formulario > button {
+        align-self: center;
       }
       table {
         width: 100%;

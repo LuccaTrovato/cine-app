@@ -48,9 +48,9 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
       </label>
       <label>
         Afiche
-        <input type="file" accept="image/*" (change)="archivoSeleccionado.set($any($event.target).files[0])" />
+        <input class="archivo" type="file" accept="image/*" (change)="archivoSeleccionado.set($any($event.target).files[0])" />
       </label>
-      <div class="fila">
+      <div class="fila acciones-formulario">
         <label class="checkbox"><input type="checkbox" formControlName="es_destacada" /> Destacada</label>
         <label class="checkbox"><input type="checkbox" formControlName="es_proximamente" /> Próximamente</label>
       </div>
@@ -103,8 +103,10 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
               }
             </td>
             <td>
-              <button (click)="editar(p)">Editar</button>
-              <button (click)="eliminar(p)">Eliminar</button>
+              <div class="acciones-tabla">
+                <button class="btn-editar" (click)="editar(p)">Editar</button>
+                <button class="btn-eliminar" (click)="eliminar(p)">Eliminar</button>
+              </div>
             </td>
           </tr>
         }
@@ -117,7 +119,8 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
-        max-width: 480px;
+        box-sizing: border-box;
+        width: 100%;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1.25rem;
@@ -128,6 +131,7 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         gap: 1rem;
       }
       label {
+        min-width: 0;
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -138,9 +142,27 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         flex-direction: row;
         align-items: center;
       }
+      label.checkbox input {
+        appearance: none;
+        width: 1.25rem;
+        height: 1.25rem;
+        flex: 0 0 1.25rem;
+        padding: 0;
+        border: 1px solid #777;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      label.checkbox input:checked {
+        background: #e50914;
+        border-color: #e50914;
+        box-shadow: inset 0 0 0 4px #181818;
+      }
       input,
       select,
       textarea {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
         padding: 0.5rem;
         border-radius: 4px;
         border: 1px solid #555;
@@ -157,9 +179,9 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         border: 1px solid #555;
         background: transparent;
         color: inherit;
-        border-radius: 14px;
-        padding: 0.2rem 0.6rem;
-        font-size: 0.75rem;
+        border-radius: 4px;
+        padding: 0.55rem 1rem;
+        font-size: 0.95rem;
         cursor: pointer;
       }
       .chips button.activo {
@@ -168,13 +190,49 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         color: #fff;
       }
       button[type='submit'],
-      table button {
+      table button,
+      .acciones-formulario button {
         background: #e50914;
         color: #fff;
         border: none;
-        padding: 0.5rem 1rem;
+        padding: 0.65rem 1.25rem;
         border-radius: 4px;
         cursor: pointer;
+      }
+      .acciones-formulario {
+        justify-content: center;
+      }
+      .archivo {
+        padding: 0.55rem;
+        border: 1px solid #555;
+        border-radius: 4px;
+        background: #181818;
+      }
+      .archivo::file-selector-button {
+        margin-right: 0.75rem;
+        padding: 0.5rem 0.8rem;
+        border: 0;
+        border-radius: 4px;
+        background: #e50914;
+        color: #fff;
+        cursor: pointer;
+      }
+      .acciones-tabla {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+      .acciones-tabla button {
+        min-width: 5.5rem;
+      }
+      .acciones-tabla .btn-editar {
+        background: #333;
+        border: 1px solid #777;
+      }
+      .acciones-tabla .btn-eliminar {
+        background: transparent;
+        border: 1px solid #e50914;
+        color: #e50914;
       }
       table {
         width: 100%;

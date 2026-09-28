@@ -94,7 +94,7 @@ const DIAS = [
         <p class="exito">{{ exito() }}</p>
       }
 
-      <button type="submit" [disabled]="form.invalid || diasSeleccionados.length === 0 || programando()">
+      <button class="btn-primario" type="submit" [disabled]="form.invalid || diasSeleccionados.length === 0 || programando()">
         {{ programando() ? 'Programando...' : 'Programar funciones' }}
       </button>
     </form>
@@ -105,7 +105,7 @@ const DIAS = [
         <span class="chip">{{ s.nombre }}</span>
       }
       <input #nombreSala placeholder="Nombre nueva sala" />
-      <button type="button" (click)="agregarSala(nombreSala.value); nombreSala.value = ''">Agregar sala</button>
+      <button class="btn-secundario" type="button" (click)="agregarSala(nombreSala.value); nombreSala.value = ''">Agregar sala</button>
     </div>
 
     <h2>Funciones programadas</h2>
@@ -127,8 +127,8 @@ const DIAS = [
             <td>{{ f.fecha_hora_inicio | date: 'dd/MM/yyyy HH:mm' }}</td>
             <td>{{ f.salas?.nombre }}</td>
             <td>{{ f.formato }} · {{ f.idioma }}</td>
-            <td>&#36;{{ f.precio_base }}</td>
-            <td><button (click)="eliminar(f)">Eliminar</button></td>
+            <td>&#36;{{ funcionesService.precioVigente(f) }}</td>
+            <td><button class="btn-eliminar" (click)="eliminar(f)">Eliminar</button></td>
           </tr>
         }
       </tbody>
@@ -136,16 +136,18 @@ const DIAS = [
   `,
   styles: [
     `
-      .formulario {
+        .formulario {
         display: flex;
         flex-direction: column;
-        gap: 0.85rem;
-        max-width: 600px;
+        gap: 0.75rem;
+        box-sizing: border-box;
+        width: 100%;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1.25rem;
         margin-bottom: 2rem;
       }
+
       .fila {
         display: flex;
         gap: 1rem;
@@ -158,6 +160,7 @@ const DIAS = [
         margin-bottom: 1.5rem;
       }
       label {
+        min-width: 0;
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -166,6 +169,9 @@ const DIAS = [
       }
       input,
       select {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
         padding: 0.5rem;
         border-radius: 4px;
         border: 1px solid #555;
@@ -182,9 +188,9 @@ const DIAS = [
         border: 1px solid #555;
         background: transparent;
         color: inherit;
-        border-radius: 14px;
-        padding: 0.25rem 0.7rem;
-        font-size: 0.8rem;
+        border-radius: 4px;
+        padding: 0.55rem 1rem;
+        font-size: 0.95rem;
         cursor: pointer;
       }
       .chips button.activo {
@@ -201,6 +207,22 @@ const DIAS = [
         padding: 0.5rem 1rem;
         border-radius: 4px;
         cursor: pointer;
+      }
+      .btn-primario {
+        align-self: center;
+        min-width: 13rem;
+        padding: 0.7rem 1.3rem;
+      }
+      .btn-secundario {
+        background: #333;
+        border: 1px solid #777;
+        padding: 0.65rem 1rem;
+      }
+      .btn-eliminar {
+        background: transparent;
+        border: 1px solid #e50914;
+        color: #e50914;
+        padding: 0.65rem 1rem;
       }
       table {
         width: 100%;
@@ -223,7 +245,7 @@ const DIAS = [
 })
 export class FuncionesAdminComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private funcionesService = inject(FuncionesService);
+  funcionesService = inject(FuncionesService);
   private peliculasService = inject(PeliculasService);
   private auditoriaService = inject(AuditoriaService);
   private auth = inject(AuthService);

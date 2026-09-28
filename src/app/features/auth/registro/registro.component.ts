@@ -52,7 +52,9 @@ import { AuthService } from '../../../core/services/auth.service';
   styles: [
     `
       .tarjeta {
+        width: 100%;
         max-width: 420px;
+        box-sizing: border-box;
         margin: 2rem auto;
         padding: 1.5rem;
         border: 1px solid #333;
@@ -68,6 +70,7 @@ import { AuthService } from '../../../core/services/auth.service';
         gap: 1rem;
       }
       label {
+        min-width: 0;
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -75,6 +78,9 @@ import { AuthService } from '../../../core/services/auth.service';
         font-size: 0.9rem;
       }
       input {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
         padding: 0.5rem;
         border-radius: 4px;
         border: 1px solid #555;
@@ -94,6 +100,12 @@ import { AuthService } from '../../../core/services/auth.service';
       .error {
         color: #e50914;
         font-size: 0.85rem;
+      }
+      @media (max-width: 520px) {
+        .fila {
+          flex-direction: column;
+          gap: 1rem;
+        }
       }
     `,
   ],

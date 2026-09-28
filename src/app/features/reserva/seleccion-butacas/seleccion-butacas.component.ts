@@ -19,7 +19,7 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
         <h1>{{ f.peliculas?.titulo }}</h1>
         <p>{{ f.fecha_hora_inicio | date: 'EEEE dd/MM HH:mm' }} · {{ f.formato }} · {{ f.idioma }} · {{ f.salas?.nombre }}</p>
         @if (preventa()) {
-          <p class="preventa">🎟️ Precio de preventa vigente</p>
+          <p class="preventa">Precio de preventa vigente</p>
         }
       </div>
 
@@ -27,7 +27,6 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
         <span><i class="cuadro libre"></i> Libre</span>
         <span><i class="cuadro ocupada"></i> Ocupada</span>
         <span><i class="cuadro seleccionada"></i> Seleccionada</span>
-        <span><i class="cuadro vip"></i> VIP</span>
         <span><i class="cuadro accesible"></i> Accesible</span>
       </div>
 
@@ -135,9 +134,6 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
       .cuadro.seleccionada {
         background: #2ecc71;
       }
-      .cuadro.vip {
-        background: #f5c518;
-      }
       .cuadro.accesible {
         background: #3498db;
       }
@@ -155,6 +151,9 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
         display: flex;
         flex-direction: column;
         gap: 3px;
+        width: fit-content;
+        max-width: 100%;
+        margin: 0 auto;
         overflow-x: auto;
       }
       .fila {
@@ -184,9 +183,6 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
         color: #ccc;
         cursor: pointer;
         padding: 0;
-      }
-      .butaca.vip {
-        background: #7a6100;
       }
       .butaca.accesible {
         background: #1c4a6e;

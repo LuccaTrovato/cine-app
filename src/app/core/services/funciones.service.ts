@@ -41,7 +41,7 @@ export class FuncionesService {
   async listarPorPelicula(peliculaId: string): Promise<Funcion[]> {
     const { data, error } = await this.supabaseService.client
       .from('funciones')
-      .select('*, salas(nombre)')
+      .select('*, peliculas(titulo, imagen_url, duracion_minutos, clasificacion_edad, fecha_estreno, precio_preventa), salas(nombre)')
       .eq('pelicula_id', peliculaId)
       .gte('fecha_hora_inicio', new Date().toISOString())
       .order('fecha_hora_inicio', { ascending: true });
@@ -57,6 +57,21 @@ export class FuncionesService {
       .single();
     if (error) throw error;
     return data as Funcion;
+  }
+
+  /** Devuelve el precio visible y vigente, incluyendo preventa si esta activa hoy. */
+  precioVigente(funcion: Funcion): number {
+    const pelicula = funcion.peliculas;
+    if (!pelicula?.fecha_estreno || pelicula.precio_preventa == null) return Number(funcion.precio_base);
+
+    const ahora = new Date();
+    const estreno = new Date(pelicula.fecha_estreno);
+    const inicioPreventa = new Date(estreno);
+    inicioPreventa.setDate(inicioPreventa.getDate() - 7);
+
+    return ahora >= inicioPreventa && ahora < estreno
+      ? Number(pelicula.precio_preventa)
+      : Number(funcion.precio_base);
   }
 
   /** Calcula las fechas/horas exactas de las ocurrencias solicitadas (dias de semana repetidos N semanas). */

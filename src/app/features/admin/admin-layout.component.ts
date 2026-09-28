@@ -35,9 +35,10 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
       .submenu a {
         color: #ccc;
         text-decoration: none;
-        padding: 0.4rem 0.6rem;
+        padding: 0.65rem 0.8rem;
         border-radius: 4px;
-        font-size: 0.9rem;
+        border: 1px solid #333;
+        font-size: 1rem;
       }
       .submenu a.activo {
         background: #e50914;

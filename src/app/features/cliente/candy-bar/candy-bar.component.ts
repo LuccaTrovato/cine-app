@@ -8,7 +8,7 @@ import { CandyProducto } from '../../../core/models/candy.model';
   standalone: true,
   imports: [],
   template: `
-    <h1>🍿 Candy Bar</h1>
+    <h1>Candy Bar</h1>
     @if (auth.profile(); as p) {
       <p>Tus puntos: <strong>{{ p.puntos_acumulados }}</strong></p>
     }
@@ -26,9 +26,11 @@ import { CandyProducto } from '../../../core/models/candy.model';
             <img [src]="prod.imagen_url" [alt]="prod.nombre" />
           }
           <h3>{{ prod.nombre }}</h3>
-          <p>{{ prod.descripcion }}</p>
-          <p>&#36;{{ prod.precio }} · {{ prod.puntos_canje }} pts</p>
-          <p class="stock">Stock: {{ prod.stock }}</p>
+          <div class="datos">
+            <p class="descripcion">{{ prod.descripcion }}</p>
+            <p>&#36;{{ prod.precio }} · {{ prod.puntos_canje }} pts</p>
+            <p class="stock">Stock: {{ prod.stock }}</p>
+          </div>
           @if (auth.isAuthenticated()) {
             <div class="acciones">
               <button [disabled]="prod.stock === 0" (click)="comprar(prod)">Comprar</button>
@@ -48,14 +50,48 @@ import { CandyProducto } from '../../../core/models/candy.model';
     `
       .grilla {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 1.25rem;
         margin-top: 1rem;
       }
       .tarjeta {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        overflow: hidden;
         border: 1px solid #333;
         border-radius: 8px;
         padding: 1rem;
+      }
+      .tarjeta h3,
+      .tarjeta p {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+      .tarjeta h3 {
+        margin: 0.35rem 0 0.1rem;
+        min-height: 2.8rem;
+        display: flex;
+        align-items: flex-start;
+      }
+      .datos {
+        flex: 0 0 5.5rem;
+        display: flex;
+        flex-direction: column;
+      }
+      .datos p {
+        margin: 0.3rem 0;
+      }
+      .descripcion {
+        height: 2.9rem;
+        min-height: 2.9rem;
+        line-height: 1.35;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
       .tarjeta img {
         width: 100%;
@@ -71,10 +107,15 @@ import { CandyProducto } from '../../../core/models/candy.model';
       .acciones {
         display: flex;
         gap: 0.5rem;
-        margin-top: 0.5rem;
+        margin-top: auto;
+        align-items: stretch;
       }
       button {
         flex: 1;
+        min-height: 2.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         background: #e50914;
         color: #fff;
         border: none;
@@ -92,6 +133,22 @@ import { CandyProducto } from '../../../core/models/candy.model';
       }
       .error {
         color: #e50914;
+      }
+      @media (max-width: 900px) {
+        .grilla {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 600px) {
+        .grilla {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 1rem;
+        }
+      }
+      @media (max-width: 380px) {
+        .grilla {
+          grid-template-columns: 1fr;
+        }
       }
     `,
   ],

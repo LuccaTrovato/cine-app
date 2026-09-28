@@ -35,7 +35,7 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
           <p class="sinopsis">{{ p.sinopsis }}</p>
 
           @if (p.clasificacion_edad !== 'ATP') {
-            <p class="advertencia">⚠️ Acompañado por un adulto ({{ p.clasificacion_edad }})</p>
+            <p class="advertencia">Acompañado por un adulto ({{ p.clasificacion_edad }})</p>
           }
 
           @if (p.es_proximamente) {
@@ -47,7 +47,7 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
             </p>
             @if (auth.isAuthenticated()) {
               <button (click)="activarAlerta()" [disabled]="alertaActivada()">
-                {{ alertaActivada() ? '🔔 Alerta activada' : 'Activar Alerta de estreno' }}
+                {{ alertaActivada() ? 'Alerta activada' : 'Activar Alerta de estreno' }}
               </button>
             }
           }
@@ -63,7 +63,7 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
                   <span class="chip">{{ f.formato }}</span>
                   <span class="chip">{{ f.idioma }}</span>
                   <span class="chip">{{ f.salas?.nombre }}</span>
-                  <span>&#36;{{ f.precio_base }}</span>
+                  <span>&#36;{{ funcionesService.precioVigente(f) }}</span>
                   <a [routerLink]="['/funciones', f.id, 'butacas']" class="btn">Comprar</a>
                 </li>
               }
@@ -165,18 +165,62 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        max-width: 420px;
+        width: 100%;
+        max-width: 520px;
+        box-sizing: border-box;
+        padding: 1rem;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: #181818;
         margin-bottom: 1rem;
       }
+      .nueva-resena label {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+      }
+      .nueva-resena select,
       textarea {
+        width: 100%;
+        box-sizing: border-box;
         padding: 0.5rem;
         border-radius: 4px;
         border: 1px solid #555;
+        background: #101010;
+        color: #fff;
         min-height: 70px;
       }
+      .nueva-resena select {
+        min-height: 2.5rem;
+      }
+      .nueva-resena button {
+        width: 100%;
+        margin-left: 0;
+        padding: 0.65rem 1rem;
+      }
       .resena {
-        border-top: 1px solid #333;
-        padding: 0.75rem 0;
+        max-width: 700px;
+        margin: 0.75rem 0;
+        padding: 1rem;
+        border: 1px solid #333;
+        border-radius: 8px;
+        background: #181818;
+      }
+      .resena app-estrellas {
+        display: block;
+        margin: 0.35rem 0;
+      }
+      .resena p {
+        margin-bottom: 0;
+        overflow-wrap: anywhere;
+      }
+      @media (max-width: 600px) {
+        .detalle {
+          gap: 1rem;
+        }
+        .info {
+          min-width: 0;
+        }
       }
     `,
   ],
@@ -185,7 +229,7 @@ export class PeliculaDetalleComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private peliculasService = inject(PeliculasService);
   private resenasService = inject(ResenasService);
-  private funcionesService = inject(FuncionesService);
+  funcionesService = inject(FuncionesService);
   private supabaseService = inject(SupabaseService);
   auth = inject(AuthService);
 

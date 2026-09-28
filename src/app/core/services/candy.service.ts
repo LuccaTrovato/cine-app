@@ -60,6 +60,14 @@ export class CandyService {
     return await this.obtenerPedido(data.pedido_id);
   }
 
+  async cancelarPedido(pedidoId: string): Promise<void> {
+    const { error } = await this.supabaseService.client.rpc('cancelar_pedido_candy', {
+      p_pedido_id: pedidoId,
+    });
+    if (error) throw new Error(error.message);
+    await this.authService.refrescarPerfil();
+  }
+
   private async obtenerPedido(id: string): Promise<CandyPedido> {
     const { data, error } = await this.supabaseService.client.from('candy_pedidos').select('*, candy_productos(*)').eq('id', id).single();
     if (error) throw error;

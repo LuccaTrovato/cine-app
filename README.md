@@ -1,4 +1,4 @@
-# 🎬 CineApp
+# CineApp
 
 Aplicación web SPA/PWA para la gestión y venta de entradas de cine, Candy Bar y administración, desarrollada para el **TP1 de Programación IV (UTN FRA)**.
 

@@ -118,15 +118,40 @@ create table public.funciones (
 
 create index idx_funciones_sala_horario on public.funciones (sala_id, fecha_hora_inicio, fecha_hora_fin);
 
--- Evita solapamientos + exige 30 min de limpieza entre funciones de la misma sala
+-- Evita solapamientos estrictos. El margen de limpieza se valida en el trigger
+-- siguiente porque PostgreSQL no permite una suma sobre timestamptz dentro de
+-- una expresion de indice EXCLUDE si no es IMMUTABLE.
 create extension if not exists "btree_gist";
 
 alter table public.funciones
   add constraint no_solapamiento_sala
   exclude using gist (
     sala_id with =,
-    tstzrange(fecha_hora_inicio, fecha_hora_fin + interval '30 minutes') with &&
+    tstzrange(fecha_hora_inicio, fecha_hora_fin) with &&
   );
+
+create or replace function public.validar_limpieza_funcion()
+returns trigger
+language plpgsql
+as $$
+begin
+  if exists (
+    select 1
+    from public.funciones f
+    where f.sala_id = new.sala_id
+      and f.id <> coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+      and new.fecha_hora_inicio < f.fecha_hora_fin + interval '30 minutes'
+      and f.fecha_hora_inicio < new.fecha_hora_fin + interval '30 minutes'
+  ) then
+    raise exception 'La sala seleccionada necesita al menos 30 minutos de limpieza entre funciones.';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_validar_limpieza_funcion
+  before insert or update on public.funciones
+  for each row execute function public.validar_limpieza_funcion();
 
 -- ---------------------------------------------------------------------
 -- 7. CUPONES
@@ -212,6 +237,28 @@ create table public.log_actividad (
   detalle jsonb,
   created_at timestamptz default now() not null
 );
+
+-- Codigos QR cortos y unicos para mostrar en tickets y pedidos.
+create or replace function public.generar_codigo_qr_corto()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.codigo_qr := case
+    when tg_table_name = 'entradas' then 'TKT-'
+    else 'CB-'
+  end || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
+  return new;
+end;
+$$;
+
+create trigger trg_codigo_qr_corto_entrada
+  before insert on public.entradas
+  for each row execute function public.generar_codigo_qr_corto();
+
+create trigger trg_codigo_qr_corto_candy
+  before insert on public.candy_pedidos
+  for each row execute function public.generar_codigo_qr_corto();
 
 -- =====================================================================
 -- ROW LEVEL SECURITY
@@ -520,7 +567,7 @@ begin
     v_columna := (v_butaca->>'columna')::int;
     v_es_vip := v_fila in ('R', 'S', 'T');
     v_precio_butaca := case when v_es_vip then round(v_precio_base * 1.3, 2) else v_precio_base end;
-    v_codigo_qr := 'TICKET-' || gen_random_uuid();
+    v_codigo_qr := 'TKT-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
 
     begin
       insert into public.entradas (compra_id, funcion_id, usuario_id, fila, columna, es_vip, codigo_qr, precio_pagado)
@@ -582,6 +629,43 @@ begin
 end;
 $$;
 
+create or replace function public.cancelar_pedido_candy(p_pedido_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_usuario uuid := auth.uid();
+  v_pedido public.candy_pedidos%rowtype;
+begin
+  select * into v_pedido
+  from public.candy_pedidos
+  where id = p_pedido_id
+    and usuario_id = v_usuario
+  for update;
+
+  if not found then raise exception 'Pedido no encontrado.'; end if;
+  if v_pedido.estado <> 'PENDIENTE' then
+    raise exception 'Este pedido ya fue validado o cancelado.';
+  end if;
+
+  perform set_config('app.bypass_rls_triggers', 'true', true);
+  update public.candy_pedidos set estado = 'CANCELADO' where id = p_pedido_id;
+  update public.candy_productos set stock = stock + v_pedido.cantidad where id = v_pedido.producto_id;
+
+  if coalesce(v_pedido.precio_pagado, 0) > 0 then
+    update public.profiles
+    set credito_favor = round(credito_favor + v_pedido.precio_pagado, 2)
+    where id = v_usuario;
+  elsif v_pedido.puntos_usados > 0 then
+    update public.profiles
+    set puntos_acumulados = puntos_acumulados + v_pedido.puntos_usados
+    where id = v_usuario;
+  end if;
+end;
+$$;
+
 create or replace function public.candy_comprar(p_producto_id bigint, p_cantidad int default 1)
 returns jsonb
 language plpgsql
@@ -603,7 +687,7 @@ begin
 
   v_total := round(v_producto.precio * p_cantidad, 2);
   v_puntos := floor(v_total);
-  v_codigo_qr := 'CANDY-' || gen_random_uuid();
+  v_codigo_qr := 'CB-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
 
   insert into public.candy_pedidos (usuario_id, producto_id, cantidad, precio_pagado, puntos_usados, codigo_qr)
   values (v_usuario, p_producto_id, p_cantidad, v_total, 0, v_codigo_qr)
@@ -643,7 +727,7 @@ begin
     raise exception 'No tenes puntos suficientes para este canje.';
   end if;
 
-  v_codigo_qr := 'CANDY-' || gen_random_uuid();
+  v_codigo_qr := 'CB-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 12));
 
   insert into public.candy_pedidos (usuario_id, producto_id, cantidad, precio_pagado, puntos_usados, codigo_qr)
   values (v_usuario, p_producto_id, p_cantidad, 0, v_puntos_necesarios, v_codigo_qr)
@@ -709,6 +793,25 @@ $$;
 -- SEED: salas iniciales (asignacion automatica las usa como pool)
 -- =====================================================================
 insert into public.salas (nombre) values ('Sala 1'), ('Sala 2'), ('Sala 3'), ('Sala 4'), ('Sala 5');
+
+-- =====================================================================
+-- SEED: combos iniciales de Candy Bar
+-- =====================================================================
+insert into public.candy_productos (nombre, descripcion, precio, puntos_canje, stock)
+select datos.nombre, datos.descripcion, datos.precio, datos.puntos_canje, datos.stock
+from (values
+  ('COMBO FAMILIA', 'Combo familiar para compartir', 12000, 12000, 50),
+  ('COMBO MEGA INDIVIDUAL', 'Combo mega individual', 6000, 6000, 50),
+  ('COMBO MEGA RECARGADO', 'Combo mega con porcion recargada', 8500, 8500, 50),
+  ('COMBO NACHOS', 'Nachos con salsa cheddar', 4500, 4500, 50),
+  ('COMBO PANCHO', 'Pancho con bebida', 4000, 4000, 50),
+  ('COMBO PAPAS CON CHEDDAR', 'Papas fritas con salsa cheddar', 5000, 5000, 50)
+) as datos(nombre, descripcion, precio, puntos_canje, stock)
+where not exists (
+  select 1
+  from public.candy_productos producto
+  where producto.nombre = datos.nombre
+);
 
 -- =====================================================================
 -- REALTIME: publicar tablas necesarias para WebSockets
