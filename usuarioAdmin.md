@@ -11,3 +11,5 @@ CONTRA: 123456
 USER: holaprueba@gmail.com
 PASS: Lucca1234
 
+USER: prueba2@gmail.com
+PASS: Lucca23
