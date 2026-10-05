@@ -6,13 +6,22 @@ import { Pelicula } from '../models/pelicula.model';
 export class PeliculasService {
   constructor(private supabaseService: SupabaseService) {}
 
+  private aplicarEstadoEstreno(peliculas: Pelicula[]): Pelicula[] {
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return peliculas.map((pelicula) => ({
+      ...pelicula,
+      es_proximamente: pelicula.fecha_estreno ? new Date(`${pelicula.fecha_estreno}T00:00:00`) > hoy : false,
+    }));
+  }
+
   async listar(): Promise<Pelicula[]> {
     const { data, error } = await this.supabaseService.client
       .from('peliculas')
       .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data ?? []) as Pelicula[];
+    return this.aplicarEstadoEstreno((data ?? []) as Pelicula[]);
   }
 
   async obtener(id: string): Promise<Pelicula | null> {
@@ -22,7 +31,7 @@ export class PeliculasService {
       .eq('id', id)
       .single();
     if (error) throw error;
-    return data as Pelicula;
+    return this.aplicarEstadoEstreno([data as Pelicula])[0];
   }
 
   /** Busca por titulo y/o filtra por generos (coincidencia de al menos uno). */
@@ -32,7 +41,7 @@ export class PeliculasService {
     if (generos.length > 0) query = query.overlaps('generos', generos);
     const { data, error } = await query.order('titulo', { ascending: true });
     if (error) throw error;
-    return (data ?? []) as Pelicula[];
+    return this.aplicarEstadoEstreno((data ?? []) as Pelicula[]);
   }
 
   /** Top 3 peliculas segun cantidad de entradas confirmadas (no canceladas). */
@@ -45,9 +54,9 @@ export class PeliculasService {
         .select('*')
         .eq('es_destacada', true)
         .limit(limite);
-      return (destacadas ?? []) as Pelicula[];
+      return this.aplicarEstadoEstreno((destacadas ?? []) as Pelicula[]);
     }
-    return (data ?? []) as Pelicula[];
+    return this.aplicarEstadoEstreno((data ?? []) as Pelicula[]);
   }
 
   async crear(pelicula: Partial<Pelicula>): Promise<Pelicula> {

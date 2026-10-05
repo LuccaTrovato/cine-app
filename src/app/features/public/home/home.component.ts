@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { PeliculasService } from '../../../core/services/peliculas.service';
 import { ResenasService } from '../../../core/services/resenas.service';
@@ -10,7 +11,7 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
 @Component({
     selector: 'app-home',
     standalone: true,
-    imports: [RouterLink, EstrellasComponent],
+    imports: [CommonModule, RouterLink, EstrellasComponent],
     template: `
       <a routerLink="/beneficios" class="benef" aria-label="Ver beneficios">
         <img src="imagenes/FlyerBenef.jpg" alt="Beneficios" />
@@ -72,6 +73,9 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
                 <app-estrellas [puntuacion]="promedios().get(p.id) ?? 0" />
                 @if (p.es_proximamente) {
                   <span class="badge">Próximamente</span>
+                  @if (p.fecha_estreno) {
+                    <span class="estreno">Estreno: {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}</span>
+                  }
                 }
               </div>
             </a>
@@ -168,6 +172,12 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         font-size: 0.7rem;
         padding: 0.1rem 0.4rem;
         border-radius: 3px;
+      }
+      .estreno {
+        display: block;
+        margin-top: 0.3rem;
+        color: #bbb;
+        font-size: 0.75rem;
       }
       .buscador {
         display: flex;

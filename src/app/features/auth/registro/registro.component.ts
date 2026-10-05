@@ -27,7 +27,7 @@ import { AuthService } from '../../../core/services/auth.service';
         </label>
         <label>
           Fecha de nacimiento
-          <input type="date" formControlName="fecha_nacimiento" />
+          <input class="fecha-personalizada" type="date" formControlName="fecha_nacimiento" />
         </label>
         <label>
           Email
@@ -84,6 +84,13 @@ import { AuthService } from '../../../core/services/auth.service';
         padding: 0.5rem;
         border-radius: 4px;
         border: 1px solid #555;
+      }
+      .fecha-personalizada {
+        color-scheme: dark;
+      }
+      .fecha-personalizada::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 1;
       }
       button {
         background: #e50914;

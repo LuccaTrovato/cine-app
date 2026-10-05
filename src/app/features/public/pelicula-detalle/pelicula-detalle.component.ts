@@ -5,7 +5,6 @@ import { FormsModule } from '@angular/forms';
 import { PeliculasService } from '../../../core/services/peliculas.service';
 import { ResenasService } from '../../../core/services/resenas.service';
 import { FuncionesService } from '../../../core/services/funciones.service';
-import { SupabaseService } from '../../../core/services/supabase.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Pelicula, Resena } from '../../../core/models/pelicula.model';
 import { Funcion } from '../../../core/models/funcion.model';
@@ -42,14 +41,9 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
             <p class="proximamente">
               Próximamente
               @if (p.fecha_estreno) {
-                - Estreno: {{ p.fecha_estreno }}
+                - Estreno: {{ p.fecha_estreno | date: 'dd/MM/yyyy' }}
               }
             </p>
-            @if (auth.isAuthenticated()) {
-              <button (click)="activarAlerta()" [disabled]="alertaActivada()">
-                {{ alertaActivada() ? 'Alerta activada' : 'Activar Alerta de estreno' }}
-              </button>
-            }
           }
 
           <h2>Funciones disponibles</h2>
@@ -82,7 +76,10 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
                 </select>
               </label>
               <textarea [(ngModel)]="nuevoComentario" maxlength="280" placeholder="Tu comentario (max. 280 caracteres)"></textarea>
-              <button (click)="publicarResena()">Publicar reseña</button>
+              <button (click)="guardarResena()">{{ resenaEditandoId() ? 'Guardar reseña' : 'Publicar reseña' }}</button>
+              @if (resenaEditandoId()) {
+                <button type="button" class="secundario" (click)="cancelarEdicionResena()">Cancelar edición</button>
+              }
             </div>
           }
           @for (r of resenas(); track r.id) {
@@ -90,6 +87,12 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
               <strong>{{ r.profiles?.nombre }} {{ r.profiles?.apellido }}</strong>
               <app-estrellas [puntuacion]="r.puntuacion" />
               <p>{{ r.comentario }}</p>
+              @if (auth.profile()?.id === r.usuario_id) {
+                <div class="acciones-resena">
+                  <button type="button" (click)="editarResena(r)">Editar</button>
+                  <button type="button" class="secundario" (click)="eliminarResena(r)">Eliminar</button>
+                </div>
+              }
             </div>
           }
         </div>
@@ -214,6 +217,21 @@ import { EstrellasComponent } from '../../../shared/estrellas/estrellas.componen
         margin-bottom: 0;
         overflow-wrap: anywhere;
       }
+      .acciones-resena {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .acciones-resena button,
+      .nueva-resena .secundario {
+        margin-left: 0;
+        background: #333;
+      }
+      .acciones-resena .secundario {
+        background: transparent;
+        border: 1px solid #e50914;
+        color: #e50914;
+      }
       @media (max-width: 600px) {
         .detalle {
           gap: 1rem;
@@ -230,14 +248,13 @@ export class PeliculaDetalleComponent implements OnInit {
   private peliculasService = inject(PeliculasService);
   private resenasService = inject(ResenasService);
   funcionesService = inject(FuncionesService);
-  private supabaseService = inject(SupabaseService);
   auth = inject(AuthService);
 
   pelicula = signal<Pelicula | null>(null);
   funciones = signal<Funcion[]>([]);
   resenas = signal<Resena[]>([]);
   promedio = signal(0);
-  alertaActivada = signal(false);
+  resenaEditandoId = signal<string | null>(null);
 
   nuevaPuntuacion = 5;
   nuevoComentario = '';
@@ -259,34 +276,38 @@ export class PeliculaDetalleComponent implements OnInit {
     this.resenas.set(resenas);
     this.promedio.set(promedio);
 
+  }
+
+  async guardarResena(): Promise<void> {
     const usuario = this.auth.profile();
-    if (usuario) {
-      const { data } = await this.supabaseService.client
-        .from('alertas_estreno')
-        .select('id')
-        .eq('usuario_id', usuario.id)
-        .eq('pelicula_id', id)
-        .maybeSingle();
-      this.alertaActivada.set(!!data);
+    const pelicula = this.pelicula();
+    if (!usuario || !pelicula) return;
+    const id = this.resenaEditandoId();
+    if (id) {
+      await this.resenasService.actualizar(id, this.nuevaPuntuacion, this.nuevoComentario);
+    } else {
+      await this.resenasService.crear(pelicula.id, usuario.id, this.nuevaPuntuacion, this.nuevoComentario);
     }
-  }
-
-  async activarAlerta(): Promise<void> {
-    const usuario = this.auth.profile();
-    const pelicula = this.pelicula();
-    if (!usuario || !pelicula) return;
-    const { error } = await this.supabaseService.client
-      .from('alertas_estreno')
-      .insert({ usuario_id: usuario.id, pelicula_id: pelicula.id });
-    if (!error) this.alertaActivada.set(true);
-  }
-
-  async publicarResena(): Promise<void> {
-    const usuario = this.auth.profile();
-    const pelicula = this.pelicula();
-    if (!usuario || !pelicula) return;
-    await this.resenasService.crear(pelicula.id, usuario.id, this.nuevaPuntuacion, this.nuevoComentario);
-    this.nuevoComentario = '';
+    this.cancelarEdicionResena();
     await this.cargar(pelicula.id);
+  }
+
+  editarResena(resena: Resena): void {
+    this.resenaEditandoId.set(resena.id);
+    this.nuevaPuntuacion = resena.puntuacion;
+    this.nuevoComentario = resena.comentario ?? '';
+  }
+
+  cancelarEdicionResena(): void {
+    this.resenaEditandoId.set(null);
+    this.nuevaPuntuacion = 5;
+    this.nuevoComentario = '';
+  }
+
+  async eliminarResena(resena: Resena): Promise<void> {
+    if (!confirm('¿Eliminar esta reseña?')) return;
+    await this.resenasService.eliminar(resena.id);
+    const pelicula = this.pelicula();
+    if (pelicula) await this.cargar(pelicula.id);
   }
 }

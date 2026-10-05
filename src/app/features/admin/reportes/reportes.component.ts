@@ -16,11 +16,11 @@ Chart.register(...registerables);
     <div class="filtros">
       <label>
         Desde
-        <input type="date" [(ngModel)]="desde" (change)="cargar()" />
+        <input class="fecha-personalizada" type="date" [(ngModel)]="desde" (change)="cargar()" />
       </label>
       <label>
         Hasta
-        <input type="date" [(ngModel)]="hasta" (change)="cargar()" />
+        <input class="fecha-personalizada" type="date" [(ngModel)]="hasta" (change)="cargar()" />
       </label>
       <button (click)="exportarPdf()">Exportar PDF</button>
       <button (click)="exportarExcel()">Exportar Excel</button>
@@ -60,6 +60,13 @@ Chart.register(...registerables);
         border: 1px solid #555;
         background: transparent;
         color: inherit;
+      }
+      .fecha-personalizada {
+        color-scheme: dark;
+      }
+      .fecha-personalizada::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 1;
       }
       button {
         background: #e50914;

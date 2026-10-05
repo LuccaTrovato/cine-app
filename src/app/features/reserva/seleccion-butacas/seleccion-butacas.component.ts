@@ -7,12 +7,14 @@ import { FuncionesService } from '../../../core/services/funciones.service';
 import { EntradasService, ButacaSeleccionada } from '../../../core/services/entradas.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Funcion } from '../../../core/models/funcion.model';
+import { Entrada } from '../../../core/models/entrada.model';
 import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core/utils/butacas.util';
+import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component';
 
 @Component({
   selector: 'app-seleccion-butacas',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CodigoQrComponent],
   template: `
     @if (funcion(); as f) {
       <div class="cabecera">
@@ -26,8 +28,10 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
       <div class="leyenda">
         <span><i class="cuadro libre"></i> Libre</span>
         <span><i class="cuadro ocupada"></i> Ocupada</span>
+        <span><i class="cuadro seleccionada-otro"></i> Seleccionada por otro cliente</span>
         <span><i class="cuadro seleccionada"></i> Seleccionada</span>
         <span><i class="cuadro accesible"></i> Accesible</span>
+        <span><i class="cuadro vip"></i> VIP</span>
       </div>
 
       <div class="pantalla">PANTALLA</div>
@@ -50,8 +54,9 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
                   [class.vip]="esVip(fila)"
                   [class.accesible]="esAccesible(fila)"
                   [class.ocupada]="estaOcupada(fila, col.columna)"
+                  [class.seleccionada-otro]="estaSeleccionadaPorOtro(fila, col.columna)"
                   [class.seleccionada]="estaSeleccionada(fila, col.columna)"
-                  [disabled]="estaOcupada(fila, col.columna)"
+                  [disabled]="estaOcupada(fila, col.columna) || estaSeleccionadaPorOtro(fila, col.columna)"
                   (click)="toggleButaca(fila, col.columna)"
                 >
                   {{ col.columna }}
@@ -91,6 +96,9 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
           }
           @if (exito()) {
             <p class="exito">{{ exito() }}</p>
+          }
+          @for (entrada of entradasCompra(); track entrada.id) {
+            <app-codigo-qr [valor]="entrada.codigo_qr" [tamano]="160" />
           }
 
           <button (click)="confirmarCompra()" [disabled]="procesando()">
@@ -134,8 +142,14 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
       .cuadro.seleccionada {
         background: #2ecc71;
       }
+      .cuadro.seleccionada-otro {
+        background: #e67e22;
+      }
       .cuadro.accesible {
         background: #3498db;
+      }
+      .cuadro.vip {
+        background: #d4a017;
       }
       .pantalla {
         text-align: center;
@@ -187,10 +201,20 @@ import { FILAS, columnasDeFila, esFilaVip, esFilaAccesible } from '../../../core
       .butaca.accesible {
         background: #1c4a6e;
       }
+      .butaca.vip {
+        background: #7a5b08;
+        color: #fff;
+      }
       .butaca.ocupada {
         background: #700;
         cursor: not-allowed;
         opacity: 0.6;
+      }
+      .butaca.seleccionada-otro {
+        background: #e67e22;
+        color: #111;
+        cursor: not-allowed;
+        opacity: 0.8;
       }
       .butaca.seleccionada {
         background: #2ecc71 !important;
@@ -250,12 +274,14 @@ export class SeleccionButacasComponent implements OnInit, OnDestroy {
 
   filas = FILAS;
   columnas = columnasDeFila();
-  columnaCentroInicio = 5; // primera columna del bloque central (tras las 4 de la izquierda)
-  columnaDerechaInicio = 25; // primera columna del bloque derecho
+  columnaCentroInicio = 3; // primera columna del bloque central (tras las 2 de la izquierda)
+  columnaDerechaInicio = 13; // primera columna del bloque derecho
 
   funcion = signal<Funcion | null>(null);
   ocupadas = signal<Set<string>>(new Set());
+  seleccionadasPorOtros = signal<Set<string>>(new Set());
   seleccionadas = signal<ButacaSeleccionada[]>([]);
+  entradasCompra = signal<Entrada[]>([]);
   procesando = signal(false);
   error = signal<string | null>(null);
   exito = signal<string | null>(null);
@@ -289,12 +315,18 @@ export class SeleccionButacasComponent implements OnInit, OnDestroy {
         else nuevo.delete(clave);
         return nuevo;
       });
+    }, (butacas) => {
+      this.seleccionadasPorOtros.set(new Set(butacas.map((butaca) => `${butaca.fila}-${butaca.columna}`)));
     });
+    this.entradasService.actualizarSeleccionTemporal(this.canal, []);
   }
 
   ngOnDestroy(): void {
     // Previene fugas de memoria por canales WebSocket abiertos al salir de la vista.
-    if (this.canal) this.entradasService.desuscribirse(this.canal);
+    if (this.canal) {
+      this.entradasService.actualizarSeleccionTemporal(this.canal, []);
+      this.entradasService.desuscribirse(this.canal);
+    }
   }
 
   estaOcupada(fila: string, columna: number): boolean {
@@ -305,6 +337,10 @@ export class SeleccionButacasComponent implements OnInit, OnDestroy {
     return this.seleccionadas().some((b) => b.fila === fila && b.columna === columna);
   }
 
+  estaSeleccionadaPorOtro(fila: string, columna: number): boolean {
+    return !this.estaSeleccionada(fila, columna) && this.seleccionadasPorOtros().has(`${fila}-${columna}`);
+  }
+
   toggleButaca(fila: string, columna: number): void {
     this.seleccionadas.update((actuales) => {
       if (actuales.some((b) => b.fila === fila && b.columna === columna)) {
@@ -312,6 +348,7 @@ export class SeleccionButacasComponent implements OnInit, OnDestroy {
       }
       return [...actuales, { fila, columna }];
     });
+    if (this.canal) this.entradasService.actualizarSeleccionTemporal(this.canal, this.seleccionadas());
   }
 
   precioButaca(fila: string): number {
@@ -338,8 +375,14 @@ export class SeleccionButacasComponent implements OnInit, OnDestroy {
         codigoCupon: this.codigoCupon || undefined,
         usarCredito: this.usarCredito,
       });
-      this.exito.set(`¡Compra confirmada! Ganaste ${resultado.puntosGanados} puntos.`);
-      setTimeout(() => this.router.navigateByUrl('/mis-entradas'), 1500);
+      this.entradasCompra.set(resultado.entradas);
+      const mensajePuntos = this.auth.isAuthenticated()
+        ? ` Ganaste ${resultado.puntosGanados} puntos.`
+        : ' Conserva el código QR de tus entradas, ya que no tienes un perfil para consultarlas luego.';
+      this.exito.set(`¡Compra confirmada!${mensajePuntos}`);
+      if (this.auth.isAuthenticated()) {
+        setTimeout(() => this.router.navigateByUrl('/mis-entradas'), 1500);
+      }
     } catch (e) {
       this.error.set(e instanceof Error ? e.message : 'Error al procesar la compra.');
     } finally {

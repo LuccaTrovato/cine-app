@@ -1,15 +1,23 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { SupabaseService } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-perfil',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   template: `
     @if (auth.profile(); as p) {
       <h1>Mi Perfil</h1>
+      @if (p.rol === 'empleado') {
+        <div class="tarjeta perfil-empleado">
+          <h2>Perfil de empleado</h2>
+          <p>Desde acá podés activar y validar los códigos QR de las entradas.</p>
+          <a routerLink="/empleado/validar-qr">Activar códigos QR</a>
+        </div>
+      } @else {
       <div class="tarjeta">
         <div class="avatar">
           @if (p.avatar_url) {
@@ -43,6 +51,7 @@ import { SupabaseService } from '../../../core/services/supabase.service';
           <button type="submit" [disabled]="form.invalid">Guardar cambios</button>
         </form>
       </div>
+      }
     }
   `,
   styles: [
@@ -109,6 +118,19 @@ import { SupabaseService } from '../../../core/services/supabase.service';
       }
       .exito {
         color: #2ecc71;
+      }
+      .perfil-empleado {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .perfil-empleado a {
+        align-self: flex-start;
+        background: #e50914;
+        color: #fff;
+        padding: 0.6rem 1rem;
+        border-radius: 4px;
+        text-decoration: none;
       }
     `,
   ],

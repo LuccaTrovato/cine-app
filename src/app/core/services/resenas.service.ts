@@ -31,6 +31,14 @@ export class ResenasService {
     if (error) throw error;
   }
 
+  async actualizar(id: string, puntuacion: number, comentario: string): Promise<void> {
+    const { error } = await this.supabaseService.client
+      .from('resenas')
+      .update({ puntuacion, comentario })
+      .eq('id', id);
+    if (error) throw error;
+  }
+
   async eliminar(id: string): Promise<void> {
     const { error } = await this.supabaseService.client.from('resenas').delete().eq('id', id);
     if (error) throw error;

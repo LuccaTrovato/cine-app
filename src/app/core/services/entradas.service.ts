@@ -8,6 +8,7 @@ import { Pelicula } from '../models/pelicula.model';
 import { calcularEdad } from '../utils/edad.util';
 
 export const RECARGO_VIP = 0.3; // 30% sobre el precio base
+const ENTRADAS_ANONIMAS_KEY = 'cine-entradas-anonimas';
 
 export interface ButacaSeleccionada {
   fila: string;
@@ -24,6 +25,8 @@ export interface ResultadoCompra {
 
 @Injectable({ providedIn: 'root' })
 export class EntradasService {
+  private presenciaPorCanal = new WeakMap<RealtimeChannel, { conectado: boolean; butacas: ButacaSeleccionada[] }>();
+
   constructor(
     private supabaseService: SupabaseService,
     private authService: AuthService
@@ -41,8 +44,12 @@ export class EntradasService {
   }
 
   /** Suscribe a cambios realtime de entradas para una funcion especifica. Recordar removeChannel en ngOnDestroy. */
-  suscribirseAButacas(funcionId: string, onCambio: (fila: string, columna: number, ocupada: boolean) => void): RealtimeChannel {
-    return this.supabaseService.client
+  suscribirseAButacas(
+    funcionId: string,
+    onCambio: (fila: string, columna: number, ocupada: boolean) => void,
+    onSeleccionTemporal: (butacas: ButacaSeleccionada[]) => void,
+  ): RealtimeChannel {
+    const canal = this.supabaseService.client
       .channel(`butacas-funcion-${funcionId}`)
       .on(
         'postgres_changes',
@@ -54,7 +61,42 @@ export class EntradasService {
         { event: 'UPDATE', schema: 'public', table: 'entradas', filter: `funcion_id=eq.${funcionId}` },
         (payload) => onCambio(payload.new['fila'], payload.new['columna'], payload.new['estado'] !== 'CANCELADO')
       )
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const estado = canal.presenceState() as Record<string, Array<{ butacas?: ButacaSeleccionada[] }>>;
+        const seleccionadas = Object.values(estado).flatMap((presencias) =>
+          presencias.flatMap((presencia) => presencia.butacas ?? [])
+        );
+        onSeleccionTemporal(seleccionadas);
+      })
+      .on('presence', { event: 'join' }, () => {
+        const estado = canal.presenceState() as Record<string, Array<{ butacas?: ButacaSeleccionada[] }>>;
+        onSeleccionTemporal(Object.values(estado).flatMap((presencias) =>
+          presencias.flatMap((presencia) => presencia.butacas ?? [])
+        ));
+      })
+      .on('presence', { event: 'leave' }, () => {
+        const estado = canal.presenceState() as Record<string, Array<{ butacas?: ButacaSeleccionada[] }>>;
+        onSeleccionTemporal(Object.values(estado).flatMap((presencias) =>
+          presencias.flatMap((presencia) => presencia.butacas ?? [])
+        ));
+      });
+
+    const presencia = { conectado: false, butacas: [] as ButacaSeleccionada[] };
+    this.presenciaPorCanal.set(canal, presencia);
+    canal.subscribe((estado) => {
+      if (estado === 'SUBSCRIBED') {
+        presencia.conectado = true;
+        void canal.track({ butacas: presencia.butacas });
+      }
+    });
+    return canal;
+  }
+
+  actualizarSeleccionTemporal(canal: RealtimeChannel, butacas: ButacaSeleccionada[]): void {
+    const presencia = this.presenciaPorCanal.get(canal);
+    if (!presencia) return;
+    presencia.butacas = butacas;
+    if (presencia.conectado) void canal.track({ butacas });
   }
 
   desuscribirse(canal: RealtimeChannel): void {
@@ -102,11 +144,12 @@ export class EntradasService {
     usarCredito: boolean;
   }): Promise<ResultadoCompra> {
     const profile = this.authService.profile();
-    if (!profile) throw new Error('Debes iniciar sesion para comprar entradas.');
 
     // Validacion optimista en el cliente (UX rapida); el servidor vuelve a validar todo de forma autoritativa.
-    const restriccion = this.validarRestriccionEdad(params.pelicula, profile.fecha_nacimiento);
-    if (!restriccion.permitido) throw new Error(restriccion.mensaje);
+    if (profile) {
+      const restriccion = this.validarRestriccionEdad(params.pelicula, profile.fecha_nacimiento);
+      if (!restriccion.permitido) throw new Error(restriccion.mensaje);
+    }
 
     const ocupadas = await this.obtenerButacasOcupadas(params.funcion.id);
     for (const b of params.butacas) {
@@ -125,15 +168,42 @@ export class EntradasService {
     });
     if (error) throw new Error(error.message);
 
-    await this.authService.refrescarPerfil();
+    if (profile) await this.authService.refrescarPerfil();
 
-    return {
+    const resultado: ResultadoCompra = {
       compraId: data.compra_id,
-      entradas: data.entradas as Entrada[],
+      entradas: this.normalizarEntradas(data.entradas as Entrada[]),
       montoTotal: Number(data.monto_total),
       creditoUsado: Number(data.credito_usado),
       puntosGanados: Number(data.puntos_ganados),
     };
+
+    if (!profile) this.guardarEntradasAnonimas(resultado.entradas, params.funcion);
+    return resultado;
+  }
+
+  obtenerEntradasAnonimas(): Entrada[] {
+    try {
+      const entradas = JSON.parse(localStorage.getItem(ENTRADAS_ANONIMAS_KEY) ?? '[]');
+      return Array.isArray(entradas) ? this.normalizarEntradas(entradas as Entrada[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private guardarEntradasAnonimas(entradas: Entrada[], funcion: Funcion): void {
+    const detallesFuncion = {
+      fecha_hora_inicio: funcion.fecha_hora_inicio,
+      formato: funcion.formato,
+      idioma: funcion.idioma,
+      peliculas: funcion.peliculas
+        ? { titulo: funcion.peliculas.titulo, imagen_url: funcion.peliculas.imagen_url }
+        : undefined,
+      salas: funcion.salas ? { nombre: funcion.salas.nombre } : undefined,
+    };
+    const nuevas = this.normalizarEntradas(entradas).map((entrada) => ({ ...entrada, funciones: detallesFuncion }));
+    const anteriores = this.obtenerEntradasAnonimas();
+    localStorage.setItem(ENTRADAS_ANONIMAS_KEY, JSON.stringify([...nuevas, ...anteriores]));
   }
 
   async misEntradas(usuarioId: string): Promise<Entrada[]> {
@@ -155,13 +225,36 @@ export class EntradasService {
 
   /** Busca una entrada por codigo QR exacto (escaneado o tipeado manualmente). */
   async buscarPorCodigoQr(codigo: string): Promise<Entrada | null> {
+    const codigoNormalizado = codigo.trim();
     const { data, error } = await this.supabaseService.client
       .from('entradas')
       .select('*, funciones(fecha_hora_inicio, formato, idioma, peliculas(titulo), salas(nombre))')
-      .eq('codigo_qr', codigo.trim())
+      .eq('codigo_qr', codigoNormalizado)
       .maybeSingle();
     if (error) throw error;
-    return data as Entrada | null;
+    if (data) return data as Entrada;
+
+    const { data: entradaPorId, error: errorPorId } = await this.supabaseService.client
+      .from('entradas')
+      .select('*, funciones(fecha_hora_inicio, formato, idioma, peliculas(titulo), salas(nombre))')
+      .eq('id', codigoNormalizado)
+      .maybeSingle();
+    if (errorPorId) throw errorPorId;
+    return entradaPorId as Entrada | null;
+  }
+
+  private normalizarEntradas(entradas: Entrada[] | string | null | undefined): Entrada[] {
+    let lista: Entrada[];
+    try {
+      const valor = typeof entradas === 'string' ? JSON.parse(entradas) : entradas;
+      lista = Array.isArray(valor) ? (valor as Entrada[]) : [];
+    } catch {
+      lista = [];
+    }
+    return lista.map((entrada) => ({
+      ...entrada,
+      codigo_qr: entrada.codigo_qr || entrada.id,
+    }));
   }
 
   /** Valida (consume) el QR de una entrada. Rechaza si ya fue validado o cancelado. */

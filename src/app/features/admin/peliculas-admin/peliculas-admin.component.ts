@@ -50,14 +50,10 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         Afiche
         <input class="archivo" type="file" accept="image/*" (change)="archivoSeleccionado.set($any($event.target).files[0])" />
       </label>
-      <div class="fila acciones-formulario">
-        <label class="checkbox"><input type="checkbox" formControlName="es_destacada" /> Destacada</label>
-        <label class="checkbox"><input type="checkbox" formControlName="es_proximamente" /> Próximamente</label>
-      </div>
       <div class="fila">
         <label>
           Fecha de estreno
-          <input type="date" formControlName="fecha_estreno" />
+          <input class="fecha-personalizada" type="date" formControlName="fecha_estreno" />
         </label>
         <label>
           Precio preventa
@@ -138,25 +134,6 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         gap: 0.3rem;
         font-size: 0.9rem;
       }
-      label.checkbox {
-        flex-direction: row;
-        align-items: center;
-      }
-      label.checkbox input {
-        appearance: none;
-        width: 1.25rem;
-        height: 1.25rem;
-        flex: 0 0 1.25rem;
-        padding: 0;
-        border: 1px solid #777;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-      label.checkbox input:checked {
-        background: #e50914;
-        border-color: #e50914;
-        box-shadow: inset 0 0 0 4px #181818;
-      }
       input,
       select,
       textarea {
@@ -168,6 +145,13 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         border: 1px solid #555;
         background: transparent;
         color: inherit;
+      }
+      .fecha-personalizada {
+        color-scheme: dark;
+      }
+      .fecha-personalizada::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 1;
       }
       .chips {
         display: flex;
@@ -198,9 +182,6 @@ const GENEROS_DISPONIBLES = ['Accion', 'Comedia', 'Drama', 'Sci-Fi', 'Terror', '
         padding: 0.65rem 1.25rem;
         border-radius: 4px;
         cursor: pointer;
-      }
-      .acciones-formulario {
-        justify-content: center;
       }
       .archivo {
         padding: 0.55rem;
@@ -269,8 +250,6 @@ export class PeliculasAdminComponent implements OnInit {
     sinopsis: ['', Validators.required],
     duracion_minutos: [90, [Validators.required, Validators.min(1)]],
     clasificacion_edad: ['ATP', Validators.required],
-    es_destacada: [false],
-    es_proximamente: [false],
     fecha_estreno: [''],
     precio_preventa: [0],
   });
@@ -295,8 +274,6 @@ export class PeliculasAdminComponent implements OnInit {
       sinopsis: p.sinopsis,
       duracion_minutos: p.duracion_minutos,
       clasificacion_edad: p.clasificacion_edad,
-      es_destacada: p.es_destacada,
-      es_proximamente: p.es_proximamente,
       fecha_estreno: p.fecha_estreno ?? '',
       precio_preventa: p.precio_preventa ?? 0,
     });
@@ -305,7 +282,7 @@ export class PeliculasAdminComponent implements OnInit {
   cancelarEdicion(): void {
     this.editandoId.set(null);
     this.generosForm = [];
-    this.form.reset({ titulo: '', sinopsis: '', duracion_minutos: 90, clasificacion_edad: 'ATP', es_destacada: false, es_proximamente: false, fecha_estreno: '', precio_preventa: 0 });
+    this.form.reset({ titulo: '', sinopsis: '', duracion_minutos: 90, clasificacion_edad: 'ATP', fecha_estreno: '', precio_preventa: 0 });
   }
 
   async guardar(): Promise<void> {
@@ -317,12 +294,17 @@ export class PeliculasAdminComponent implements OnInit {
       let imagenUrl: string | undefined;
       const archivo = this.archivoSeleccionado();
       if (archivo) imagenUrl = await this.peliculasService.subirAfiche(archivo);
+      const hoy = new Date();
+      hoy.setHours(0, 0, 0, 0);
+      const fechaEstreno = valores.fecha_estreno ? new Date(`${valores.fecha_estreno}T00:00:00`) : null;
 
       const payload: Partial<Pelicula> = {
         ...valores,
+        es_proximamente: fechaEstreno !== null && fechaEstreno > hoy,
         clasificacion_edad: valores.clasificacion_edad as Pelicula['clasificacion_edad'],
         generos: this.generosForm,
         fecha_estreno: valores.fecha_estreno || null,
+        ...(this.editandoId() ? {} : { es_destacada: false }),
         ...(imagenUrl ? { imagen_url: imagenUrl } : {}),
       };
 

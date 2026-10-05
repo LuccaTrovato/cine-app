@@ -31,13 +31,11 @@ export const routes: Routes = [
   },
   {
     path: 'funciones/:id/butacas',
-    canActivate: [authGuard],
     loadComponent: () =>
       import('./features/reserva/seleccion-butacas/seleccion-butacas.component').then((m) => m.SeleccionButacasComponent),
   },
   {
     path: 'mis-entradas',
-    canActivate: [authGuard],
     loadComponent: () => import('./features/cliente/mis-entradas/mis-entradas.component').then((m) => m.MisEntradasComponent),
   },
   {

@@ -67,6 +67,16 @@ select:disabled {
 	color: #999 !important;
 }
 
+input[type='date'].fecha-personalizada {
+	color-scheme: dark;
+	accent-color: #fff;
+}
+
+input[type='date'].fecha-personalizada::-webkit-calendar-picker-indicator {
+	filter: brightness(0) invert(1);
+	opacity: 1;
+}
+
 app-root {
 	display: flex;
 	flex-direction: column;

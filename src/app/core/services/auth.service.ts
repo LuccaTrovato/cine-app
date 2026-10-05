@@ -10,10 +10,11 @@ export class AuthService {
   readonly cargandoSesion = signal<boolean>(true);
 
   readonly isAuthenticated = computed(() => this.profile() !== null);
-  readonly rol = computed<Rol | null>(() => this.profile()?.rol ?? null);
+  readonly rol = computed<Rol>(() => this.profile()?.rol ?? 'anon');
   readonly esAdmin = computed(() => this.rol() === 'admin');
   readonly esEmpleado = computed(() => this.rol() === 'empleado');
   readonly esCliente = computed(() => this.rol() === 'cliente');
+  readonly esAnon = computed(() => this.rol() === 'anon');
 
   constructor(private supabaseService: SupabaseService) {
     this.inicializar();

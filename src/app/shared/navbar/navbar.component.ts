@@ -12,9 +12,9 @@ import { AuthService } from '../../core/services/auth.service';
       <div class="enlaces">
         <a routerLink="/" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }">Cartelera</a>
         <a routerLink="/candy-bar" routerLinkActive="activo">Candy Bar</a>
+          <a routerLink="/mis-entradas" routerLinkActive="activo">Mis Entradas</a>
 
         @if (auth.isAuthenticated()) {
-          <a routerLink="/mis-entradas" routerLinkActive="activo">Mis Entradas</a>
           <a routerLink="/perfil" routerLinkActive="activo">{{ auth.profile()?.nombre }} ({{ auth.profile()?.puntos_acumulados }} pts)</a>
 
           @if (auth.esEmpleado() || auth.esAdmin()) {

@@ -34,7 +34,7 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
               <img class="imagen-validado" src="imagenes/checked.png" alt="Validado" />
             }
           </div>
-          @if (e.estado === 'PENDIENTE') {
+          @if (e.estado === 'PENDIENTE' && auth.profile()) {
             <button (click)="cancelar(e)">Cancelar</button>
           }
           @if (error() === e.id) {
@@ -139,7 +139,7 @@ import { CodigoQrComponent } from '../../../shared/codigo-qr/codigo-qr.component
   ],
 })
 export class MisEntradasComponent implements OnInit {
-  private auth = inject(AuthService);
+  auth = inject(AuthService);
   private entradasService = inject(EntradasService);
   private candyService = inject(CandyService);
 
@@ -149,12 +149,28 @@ export class MisEntradasComponent implements OnInit {
   errorMensaje = signal('');
 
   async ngOnInit(): Promise<void> {
+    await this.esperarSesion();
     await this.cargar();
+  }
+
+  private esperarSesion(): Promise<void> {
+    if (!this.auth.cargandoSesion()) return Promise.resolve();
+    return new Promise((resolve) => {
+      const intervalo = setInterval(() => {
+        if (!this.auth.cargandoSesion()) {
+          clearInterval(intervalo);
+          resolve();
+        }
+      }, 50);
+    });
   }
 
   private async cargar(): Promise<void> {
     const usuario = this.auth.profile();
-    if (!usuario) return;
+    if (!usuario) {
+      this.entradas.set(this.entradasService.obtenerEntradasAnonimas());
+      return;
+    }
     const [entradas, pedidos] = await Promise.all([
       this.entradasService.misEntradas(usuario.id),
       this.candyService.misPedidos(usuario.id),

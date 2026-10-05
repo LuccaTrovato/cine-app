@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { FuncionesService } from '../../../core/services/funciones.service';
@@ -56,7 +56,7 @@ const DIAS = [
         </label>
         <label>
           Fecha desde
-          <input type="date" formControlName="fechaInicio" />
+          <input class="fecha-personalizada" type="date" formControlName="fechaInicio" />
         </label>
         <label>
           Semanas a programar
@@ -109,6 +109,15 @@ const DIAS = [
     </div>
 
     <h2>Funciones programadas</h2>
+    <label class="filtro-sala">
+      Filtrar por sala
+      <select [value]="salaFiltro()" (change)="salaFiltro.set($any($event.target).value)">
+        <option value="todas">Todas las salas</option>
+        @for (s of salas(); track s.id) {
+          <option [value]="s.id">{{ s.nombre }}</option>
+        }
+      </select>
+    </label>
     <table>
       <thead>
         <tr>
@@ -121,7 +130,7 @@ const DIAS = [
         </tr>
       </thead>
       <tbody>
-        @for (f of funciones(); track f.id) {
+        @for (f of funcionesVisibles(); track f.id) {
           <tr>
             <td>{{ f.peliculas?.titulo }}</td>
             <td>{{ f.fecha_hora_inicio | date: 'dd/MM/yyyy HH:mm' }}</td>
@@ -159,6 +168,11 @@ const DIAS = [
         flex-wrap: wrap;
         margin-bottom: 1.5rem;
       }
+      .filtro-sala {
+        display: block;
+        max-width: 20rem;
+        margin-bottom: 1rem;
+      }
       label {
         min-width: 0;
         flex: 1;
@@ -177,6 +191,13 @@ const DIAS = [
         border: 1px solid #555;
         background: transparent;
         color: inherit;
+      }
+      .fecha-personalizada {
+        color-scheme: dark;
+      }
+      .fecha-personalizada::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        opacity: 1;
       }
       .chips {
         display: flex;
@@ -256,6 +277,11 @@ export class FuncionesAdminComponent implements OnInit {
   peliculas = signal<Pelicula[]>([]);
   funciones = signal<Funcion[]>([]);
   salas = signal<Sala[]>([]);
+  salaFiltro = signal('todas');
+  funcionesVisibles = computed(() => {
+    const filtro = this.salaFiltro();
+    return filtro === 'todas' ? this.funciones() : this.funciones().filter((funcion) => funcion.sala_id === filtro);
+  });
   programando = signal(false);
   error = signal<string | null>(null);
   exito = signal<string | null>(null);

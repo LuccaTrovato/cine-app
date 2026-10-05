@@ -1,8 +1,8 @@
-/** Utilidades de layout de sala: 20 filas (A-T) x 28 butacas (4 + 20 + 4). */
+/** Utilidades de layout de sala: 20 filas (A-T) x 14 butacas (2 + 10 + 2). */
 
 export const FILAS = Array.from({ length: 20 }, (_, i) => String.fromCharCode(65 + i)); // A..T
-export const BUTACAS_POR_FILA = 28;
-export const BLOQUES = { izquierda: 4, centro: 20, derecha: 4 };
+export const BUTACAS_POR_FILA = 14;
+export const BLOQUES = { izquierda: 2, centro: 10, derecha: 2 };
 export const FILAS_VIP = ['R', 'S', 'T'];
 export const FILAS_ACCESIBLES = ['J', 'K'];
 
