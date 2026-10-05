@@ -101,9 +101,6 @@ const DIAS = [
 
     <h2>Salas</h2>
     <div class="fila-salas">
-      @for (s of salas(); track s.id) {
-        <span class="chip">{{ s.nombre }}</span>
-      }
       <input #nombreSala placeholder="Nombre nueva sala" />
       <button class="btn-secundario" type="button" (click)="agregarSala(nombreSala.value); nombreSala.value = ''">Agregar sala</button>
     </div>
